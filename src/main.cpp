@@ -3,8 +3,7 @@
 #include <csignal>
 #include <thread>
 
-#include "listener.hpp"  
-#include "session.hpp" 
+#include "tcp_manager.hpp"  
 
 namespace net = boost::asio;
 
@@ -39,7 +38,7 @@ int main(int argc, char** argv)
     net::executor_work_guard guard = boost::asio::make_work_guard(ioc);
 
     tcp::endpoint endpoint(net::ip::make_address(proxy_ip), proxy_port);
-    std::make_shared<Listener>(ioc, endpoint)->Run();
+    std::make_shared<TcpAcceptor>(ioc, endpoint)->Run();
 
     // Запуск пула потоков
     for (std::size_t i = 0; i < num_threads; ++i) {

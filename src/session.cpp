@@ -3,10 +3,31 @@
 
 #include "session.hpp"
 
+
+Session::Session(net::io_context& ioc, tcp::socket&& socket)
+    : ioc_(ioc)
+    , server_socket_(std::move(socket))
+    , client_socket_(net::make_strand(ioc_), tcp::v4())
+{ 
+    const tcp::endpoint target_endpoint = GetTargetEndpoint();
+    Connect(target_endpoint);
+}
+
+
+void Session::Start()
+{
+    server_ = std::make_shared<SocketIOHandler>(std::move(server_socket_));
+    client_ = std::make_shared<SocketIOHandler>(std::move(client_socket_));
+
+    server_->SetOther(client_);
+    client_->SetOther(server_);
+}
+
+
 tcp::endpoint Session::GetTargetEndpoint()
 {
     // Смотрим адрес откуда подключение
-    std::string source_ip = acceptor_socket_.remote_endpoint().address().to_string();
+    std::string source_ip = server_socket_.remote_endpoint().address().to_string();
 
     // Разбираем исходный адрес на отдельные октеты
     std::vector<std::string> octets;
@@ -41,14 +62,14 @@ tcp::endpoint Session::GetTargetEndpoint()
     return tcp::endpoint(net::ip::make_address(new_ip_addr), TARGET_PORT);
 }
 
-void Session::Connect()
+
+void Session::Connect(const tcp::endpoint& target_endpoint)
 {
-    const tcp::endpoint target_endpoint = GetTargetEndpoint();
     auto self(shared_from_this());
 
-    sender_socket_.async_connect(target_endpoint, [self](const sys::error_code& ec){
+    client_socket_.async_connect(target_endpoint, [self](const sys::error_code& ec){
         if (!ec) {
-            std::cout << "Connected to " << self->sender_socket_.remote_endpoint().address().to_string() << "\n";
+            std::cout << "Connected to " << self->client_socket_.remote_endpoint().address().to_string() << "\n";
         }
     }); 
 }
