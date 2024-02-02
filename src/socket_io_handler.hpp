@@ -18,8 +18,9 @@ public:
 
     SocketIOHandler(tcp::socket&& socket);
     void SetOther(std::shared_ptr<SocketIOHandler>& other);
+    void Start();
 
-    void Write(std::vector<unsigned char>&& data);
+    void Write(const std::vector<unsigned char>& data);
     
 private:
     void WaitForRead();
@@ -27,5 +28,6 @@ private:
 
 private:
     std::shared_ptr<SocketIOHandler> other_;
+    std::vector<unsigned char> data_;
     tcp::socket socket_;
 };

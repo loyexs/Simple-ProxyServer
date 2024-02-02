@@ -7,20 +7,14 @@
 Session::Session(net::io_context& ioc, tcp::socket&& socket)
     : ioc_(ioc)
     , server_socket_(std::move(socket))
-    , client_socket_(net::make_strand(ioc_), tcp::v4())
-{ 
-    const tcp::endpoint target_endpoint = GetTargetEndpoint();
-    Connect(target_endpoint);
-}
+    , client_socket_(net::make_strand(ioc_))
+{ }
 
 
 void Session::Start()
 {
-    server_ = std::make_shared<SocketIOHandler>(std::move(server_socket_));
-    client_ = std::make_shared<SocketIOHandler>(std::move(client_socket_));
-
-    server_->SetOther(client_);
-    client_->SetOther(server_);
+    const tcp::endpoint target_endpoint = GetTargetEndpoint();
+    Connect(target_endpoint);
 }
 
 
@@ -69,7 +63,16 @@ void Session::Connect(const tcp::endpoint& target_endpoint)
 
     client_socket_.async_connect(target_endpoint, [self](const sys::error_code& ec){
         if (!ec) {
-            std::cout << "Connected to " << self->client_socket_.remote_endpoint().address().to_string() << "\n";
+            std::cout << "Connected to " << self->client_socket_.remote_endpoint().address().to_string() << std::endl;
+
+            self->server_ = std::make_shared<SocketIOHandler>(std::move(self->server_socket_));
+            self->client_ = std::make_shared<SocketIOHandler>(std::move(self->client_socket_));
+
+            self->server_->SetOther(self->client_);
+            self->client_->SetOther(self->server_);
+
+            self->server_->Start();
+            self->client_->Start();
         }
     }); 
 }
